@@ -1,3 +1,8 @@
+//TODO make grid
+
+use core::f32::consts::PI;
+use micromath::F32;
+
 /// Grid accosted errors
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum GridErr {
@@ -55,7 +60,7 @@ impl KartPoint {
 
         // Point is too far off the grid forward or left
         if out_r < 0.0 || out_c < 0.0 {
-            return Err(GridErr::OutOfBounds)
+            return Err(GridErr::OutOfBounds);
         }
 
         // Round to nearest grid square to allow for use as an index.
@@ -68,6 +73,19 @@ impl KartPoint {
         } else {
             Err(GridErr::OutOfBounds)
         }
+    }
+
+    /// Creates a point in kart frame from a polar coordinate in kart frame.
+    ///
+    /// Theta is in degrees.
+    pub fn from_polar(r: f32, theta: f32) -> Self {
+        let theta = (F32::from(theta) * PI) / 180.0;
+
+        // x and y are swapped from normal to reflect the karts axis
+        let x = r * theta.sin();
+        let y = r * theta.cos();
+
+        KartPoint(x.0, y.0)
     }
 }
 
@@ -93,5 +111,20 @@ mod test {
         //Test OOB
         let k = KartPoint(10.1, 0.0);
         assert!(k.transform_to_grid(GridSize(5)).is_err());
+    }
+
+    #[test]
+    fn polar_works() {
+        let stright = KartPoint::from_polar(10.0, 90.0);
+        assert_eq!(stright, KartPoint(10.0, 0.0));
+
+        let right = KartPoint::from_polar(10.0, 0.0);
+        assert_eq!(right, KartPoint(0.0, 10.0));
+
+        let left = KartPoint::from_polar(10.0, 180.0);
+        assert_eq!(left, KartPoint(0.0, -10.0));
+
+        let point = KartPoint::from_polar(5.0, 53.13);
+        assert_eq!((point.0.round(), point.1.round()), (4.0, 3.0));
     }
 }
