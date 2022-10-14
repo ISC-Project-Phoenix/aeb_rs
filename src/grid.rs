@@ -20,12 +20,12 @@ impl<const N: usize> Grid<N> {
         Self { data: arr }
     }
 
-    /// Convince function to mark a cell index as occupied.
+    /// Marks a cell as occupied.
     pub fn mark_occupied(&mut self, idx: GridPoint) {
         self[idx.into()] = Cell::Occupied
     }
 
-    /// Convince function to check if a cell is occupied.
+    /// Checks if a cell is occupied.
     pub fn is_occupied(&self, idx: GridPoint) -> bool {
         self[idx.into()] == Cell::Occupied
     }

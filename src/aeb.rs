@@ -62,11 +62,7 @@ impl<const GridN: usize> Aeb<GridN> {
             let p = p.transform_to_grid(self.grid.get_size());
             let p = if let Ok(point) = p { point } else { continue };
 
-            let grid_idx = p.into();
-
-            if self.grid[grid_idx] != Cell::Occupied {
-                self.grid[grid_idx] = Cell::Occupied
-            }
+            self.grid.mark_occupied(p);
         }
 
         //TODO determine step
