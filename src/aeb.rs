@@ -2,6 +2,7 @@ use crate::grid::{Cell, Grid, KartPoint};
 
 /// The entrypoint to the automatic emergency braking algorithm.
 pub struct Aeb<const GridN: usize> {
+    /// The occupancy grid
     grid: Grid<GridN>,
     /// Current velocity of the kart in m/s
     velocity: f32,
@@ -17,6 +18,35 @@ pub struct Aeb<const GridN: usize> {
 }
 
 impl<const GridN: usize> Aeb<GridN> {
+    /// Configures AEB.
+    ///
+    /// # Config
+    ///
+    /// - start_vel: starting velocity, in m/s
+    /// - start_wheel_angle: starting ackermann wheel angle, in degrees, positive is right.
+    /// - wheelbase: distance between axles, in meters.
+    /// - collision_box: collision bounding box, defined as the top left and bottom right points relative
+    /// to the center of the rear axel.
+    /// - min_ttc: the minimum allowed time to collision.
+    pub fn new(
+        start_vel: f32,
+        start_wheel_angle: f32,
+        wheelbase: f32,
+        collision_box: ((f32, f32), (f32, f32)),
+        min_ttc: f32,
+    ) -> Self {
+        let grid = Grid::<GridN>::new();
+
+        Self {
+            grid,
+            velocity: start_vel,
+            steering_angle: start_wheel_angle,
+            wheelbase,
+            collision_box,
+            min_ttc,
+        }
+    }
+
     /// Runs the collision checking algorithm with the current parameters.
     ///
     /// Returns true if the vehicle should brake.

@@ -9,7 +9,7 @@ pub struct Grid<const N: usize> {
 
 impl<const N: usize> Grid<N> {
     /// Creates a new grid. This function will panic if N is even.
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         // Ensure our N value is valid
         if N % 2 == 0 || N > f32::MAX as usize {
             panic!("Odd number used!");
@@ -20,9 +20,24 @@ impl<const N: usize> Grid<N> {
         Self { data: arr }
     }
 
+    /// Convince function to mark a cell index as occupied.
+    pub fn mark_occupied(&mut self, idx: GridPoint) {
+        self[idx.into()] = Cell::Occupied
+    }
+
+    /// Convince function to check if a cell is occupied.
+    pub fn is_occupied(&self, idx: GridPoint) -> bool {
+        self[idx.into()] == Cell::Occupied
+    }
+
     /// Gets the size of one side of the grid, aka n.
     pub fn get_size(&self) -> GridSize {
         GridSize(N)
+    }
+
+    /// Resets the occupancy grid to a fully free state.
+    pub fn reset(&mut self) {
+        self.data = [[Cell::Unoccupied; N]; N];
     }
 }
 
@@ -41,7 +56,7 @@ impl<const N: usize> IndexMut<(usize, usize)> for Grid<N> {
 }
 
 /// A cell in the grid
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Cell {
     Occupied,
     Unoccupied,
@@ -116,7 +131,7 @@ impl KartPoint {
     }
 
     /// Creates a point in kart frame from a polar coordinate in kart frame.
-    ///
+    /// Note that 0 degrees is still pointing to the right.
     /// Theta is in degrees.
     pub fn from_polar(r: f32, theta: f32) -> Self {
         let theta = (F32::from(theta) * PI) / 180.0;
@@ -131,7 +146,7 @@ impl KartPoint {
 
 #[cfg(test)]
 mod test {
-    use crate::grid::{Grid, GridPoint, GridSize, KartPoint};
+    use crate::grid::{Cell, Grid, GridPoint, GridSize, KartPoint};
 
     #[test]
     fn transform_point_works() {
@@ -173,6 +188,42 @@ mod test {
     fn grid_constructs() {
         let grid = Grid::<5>::new();
 
-        assert_eq!(grid.get_size(), GridSize(5))
+        assert_eq!(grid.get_size(), GridSize(5));
+    }
+
+    #[test]
+    fn grid_resets() {
+        let mut grid = Grid::<5>::new();
+
+        grid[(0, 0)] = Cell::Occupied;
+        assert_eq!(grid[(0, 0)], Cell::Occupied);
+
+        grid.reset();
+        assert_eq!(grid[(0, 0)], Cell::Unoccupied);
+    }
+
+    #[test]
+    fn grid_indexes() {
+        let mut grid = Grid::<5>::new();
+
+        assert_eq!(grid[(0, 0)], Cell::Unoccupied);
+        grid[(0, 0)] = Cell::Occupied;
+        assert_eq!(grid[(0, 0)], Cell::Occupied);
+
+        assert_eq!(grid[(4, 3)], Cell::Unoccupied);
+        grid[(4, 3)] = Cell::Occupied;
+        assert_eq!(grid[(4, 3)], Cell::Occupied);
+    }
+
+    #[test]
+    fn insert_into_grid() {
+        //Simulate the grid rutine
+        let mut grid = Grid::<5>::new();
+        let k = KartPoint(2.0, -3.0);
+        let size = grid.get_size();
+
+        let idx = k.transform_to_grid(size).unwrap();
+        grid.mark_occupied(idx);
+        assert!(grid.is_occupied(idx))
     }
 }
