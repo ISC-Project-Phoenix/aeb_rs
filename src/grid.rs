@@ -1,17 +1,57 @@
-//TODO make grid
-
 use core::f32::consts::PI;
+use core::ops::{Index, IndexMut};
 use micromath::F32;
+
+/// An nxn occupancy grid.
+pub struct Grid<const N: usize> {
+    data: [[Cell; N]; N],
+}
+
+impl<const N: usize> Grid<N> {
+    /// Creates a new grid. This function will panic if N is even.
+    const fn new() -> Self {
+        // Ensure our N value is valid
+        if N % 2 == 0 || N > f32::MAX as usize {
+            panic!("Odd number used!");
+        }
+
+        let arr = [[Cell::Unoccupied; N]; N];
+
+        Self { data: arr }
+    }
+
+    /// Gets the size of one side of the grid, aka n.
+    pub fn get_size(&self) -> GridSize {
+        GridSize(N)
+    }
+}
+
+impl<const N: usize> Index<(usize, usize)> for Grid<N> {
+    type Output = Cell;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        &self.data[index.0][index.1]
+    }
+}
+
+impl<const N: usize> IndexMut<(usize, usize)> for Grid<N> {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        &mut self.data[index.0][index.1]
+    }
+}
+
+/// A cell in the grid
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum Cell {
+    Occupied,
+    Unoccupied,
+}
 
 /// Grid accosted errors
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum GridErr {
     /// Grid point was OOB.
     OutOfBounds,
-    /// The grid size was too large for a f32.
-    GreaterThanF32,
-    /// The grid size was not odd.
-    NotOdd,
 }
 
 /// The n in nxn grid. This is garrentied to be odd and < f32::MAX.
@@ -34,7 +74,7 @@ pub struct KartPoint(pub f32, pub f32);
 /// An index indo the grid, garrentied to be in bounds. We define a point on the grid to be the top left corner of the grid squares
 /// if a grid is drawn out. The top left of the grid is (0,0).
 #[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
-pub struct GridPoint(usize, usize);
+pub struct GridPoint(usize, usize); // You should only get these by converting from KartPoints
 
 #[allow(clippy::from_over_into)]
 impl Into<(usize, usize)> for GridPoint {
@@ -91,7 +131,7 @@ impl KartPoint {
 
 #[cfg(test)]
 mod test {
-    use crate::grid::{GridPoint, GridSize, KartPoint};
+    use crate::grid::{Grid, GridPoint, GridSize, KartPoint};
 
     #[test]
     fn transform_point_works() {
@@ -114,7 +154,7 @@ mod test {
     }
 
     #[test]
-    fn polar_works() {
+    fn kartpoint_polar_works() {
         let stright = KartPoint::from_polar(10.0, 90.0);
         assert_eq!(stright, KartPoint(10.0, 0.0));
 
@@ -124,7 +164,15 @@ mod test {
         let left = KartPoint::from_polar(10.0, 180.0);
         assert_eq!(left, KartPoint(0.0, -10.0));
 
+        //Just some point
         let point = KartPoint::from_polar(5.0, 53.13);
         assert_eq!((point.0.round(), point.1.round()), (4.0, 3.0));
+    }
+
+    #[test]
+    fn grid_constructs() {
+        let grid = Grid::<5>::new();
+
+        assert_eq!(grid.get_size(), GridSize(5))
     }
 }
