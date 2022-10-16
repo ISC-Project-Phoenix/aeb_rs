@@ -1,4 +1,4 @@
-use crate::grid::{Cell, Grid, KartPoint};
+use crate::grid::{Grid, KartPoint};
 
 /// The entrypoint to the automatic emergency braking algorithm.
 pub struct Aeb<const GridN: usize> {

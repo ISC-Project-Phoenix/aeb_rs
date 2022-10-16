@@ -1,8 +1,10 @@
 use core::f32::consts::PI;
+use core::fmt::{Debug, Display, Formatter};
 use core::ops::{Index, IndexMut};
 use micromath::F32;
 
 /// An nxn occupancy grid.
+#[derive(Debug)]
 pub struct Grid<const N: usize> {
     data: [[Cell; N]; N],
 }
@@ -52,6 +54,34 @@ impl<const N: usize> Index<(usize, usize)> for Grid<N> {
 impl<const N: usize> IndexMut<(usize, usize)> for Grid<N> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         &mut self.data[index.0][index.1]
+    }
+}
+
+impl<const N: usize> Display for Grid<N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        // Print numbers
+        write!(f, "     ")?;
+        for col_n in 0..self.data.len() {
+            write!(f, "{:<4}", col_n)?;
+        }
+        writeln!(f)?;
+
+        // Print data
+        for (i, row) in self.data.into_iter().enumerate() {
+            write!(f, "{:<4}[ ", i)?;
+            for (j, col) in row.into_iter().enumerate() {
+                match col {
+                    Cell::Occupied => f.write_str("# ")?,
+                    Cell::Unoccupied => f.write_str("  ")?,
+                };
+
+                if j + 1 != row.len() {
+                    write!(f, "| ")?;
+                }
+            }
+            writeln!(f, "]{:>4}", i)?;
+        }
+        Ok(())
     }
 }
 
@@ -148,6 +178,9 @@ impl KartPoint {
 mod test {
     use crate::grid::{Cell, Grid, GridPoint, GridSize, KartPoint};
 
+    extern crate std;
+    use std::prelude::rust_2021::*;
+
     #[test]
     fn transform_point_works() {
         let k = KartPoint(2.0, -3.0);
@@ -225,5 +258,20 @@ mod test {
         let idx = k.transform_to_grid(size).unwrap();
         grid.mark_occupied(idx);
         assert!(grid.is_occupied(idx))
+    }
+
+    #[test]
+    fn display_grid() {
+        let mut grid = Grid::<111>::new();
+        let k = KartPoint(2.0, -3.0);
+        let size = grid.get_size();
+
+        let idx = k.transform_to_grid(size).unwrap();
+        grid.mark_occupied(idx);
+
+        let point: (usize, usize) = idx.into();
+        std::println!("point at: {:?}", point);
+        std::println!("m={}m", 10.0 / 411.);
+        std::println!("{}", grid)
     }
 }
