@@ -80,6 +80,13 @@ impl<const N: usize> Display for Grid<N> {
                 }
             }
             writeln!(f, "]{:>4}", i)?;
+
+            // Add separating lines
+            write!(f, "    ")?;
+            for _ in row {
+                write!(f, "----")?;
+            }
+            writeln!(f)?;
         }
         Ok(())
     }
@@ -262,7 +269,7 @@ mod test {
 
     #[test]
     fn display_grid() {
-        let mut grid = Grid::<111>::new();
+        let mut grid = Grid::<41>::new();
         let k = KartPoint(2.0, -3.0);
         let size = grid.get_size();
 
