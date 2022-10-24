@@ -1,6 +1,6 @@
 #![no_std]
 
-mod grid;
+pub mod grid;
 mod aeb;
 
 pub use aeb::Aeb;
