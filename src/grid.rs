@@ -128,6 +128,12 @@ pub struct KartPoint(pub f32, pub f32);
 #[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct GridPoint(usize, usize); // You should only get these by converting from KartPoints
 
+impl GridPoint {
+    pub fn raw(self) -> (usize, usize) {
+        self.into()
+    }
+}
+
 #[allow(clippy::from_over_into)]
 impl Into<(usize, usize)> for GridPoint {
     fn into(self) -> (usize, usize) {

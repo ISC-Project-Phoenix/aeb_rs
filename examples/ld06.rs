@@ -42,19 +42,29 @@ fn main() {
                 }
             },
             Ok(Some(scan)) => {
-                let points = scan.data.into_iter().enumerate().map(|(i, p)| {
-                    let mut polar = scan.get_range_in_polar(i as u16);
+                if (scan.start_angle >= (360.0 - 25.0) && scan.start_angle <= 360.0)
+                    || (scan.start_angle <= 25.0 && scan.start_angle >= 0.0)
+                {
+                    let points = scan.data.into_iter().enumerate().map(|(i, p)| {
+                        if p.dist < 150 {
+                            Err(GridErr::OutOfBounds)
+                        } else {
+                            let mut polar = scan.get_range_in_polar(i as u16);
 
-                    KartPoint::from_polar(polar.0 / 1000.0, polar.1)
-                        .transform_to_grid(size)
-                        .unwrap()
-                });
+                            KartPoint::from_polar(polar.0 / 1000.0, polar.1).transform_to_grid(size)
+                        }
+                    });
 
-                for p in points {
-                    grid.mark_occupied(p)
+                    for p in points {
+                        if let Ok(p) = p {
+                            grid.mark_occupied(p);
+                        }
+                    }
+
+                    println!("{}", grid);
+                } else {
+                    grid.reset()
                 }
-
-                println!("{}", grid)
             }
             _ => {}
         }
