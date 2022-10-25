@@ -10,12 +10,19 @@ pub struct Grid<const N: usize> {
 }
 
 impl<const N: usize> Grid<N> {
+    // This is used to enforce N constraints at compile time
+    const _SIZE: usize = if N % 2 == 0 {
+        panic!("Even number used for gridsize!");
+    } else if N > f32::MAX as usize {
+        panic!("Gridsize is greater than max f32!");
+    } else {
+        N
+    };
+
     /// Creates a new grid. This function will panic if N is even.
     pub const fn new() -> Self {
-        // Ensure our N value is valid
-        if N % 2 == 0 || N > f32::MAX as usize {
-            panic!("Odd number used!");
-        }
+        // Force the compiler to not remove _SIZE
+        let _ = Self::_SIZE;
 
         let arr = [[Cell::Unoccupied; N]; N];
 
