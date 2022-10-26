@@ -23,7 +23,9 @@ fn main() {
     serial.0.configure(&conf).unwrap();
 
     let mut ld06 = LD06::new(serial);
-    let mut grid = Grid::<41>::new();
+
+    // Create grid
+    let mut grid = Grid::<71>::new();
     let size = grid.get_size();
 
     loop {
@@ -42,26 +44,31 @@ fn main() {
                 }
             },
             Ok(Some(scan)) => {
-                if (scan.start_angle >= (360.0 - 25.0) && scan.start_angle <= 360.0)
-                    || (scan.start_angle <= 25.0 && scan.start_angle >= 0.0)
+                // Filter for scans in the +-25 degrees cone
+                if (360.0 - 25.0..=360.0).contains(&scan.start_angle)
+                    || (..=25.0).contains(&scan.start_angle)
+                    || (360.0 - 25.0..=360.0).contains(&scan.end_angle)
+                    || (..=25.0).contains(&scan.end_angle)
                 {
-                    let points = scan.data.into_iter().enumerate().map(|(i, p)| {
-                        if p.dist < 150 {
-                            Err(GridErr::OutOfBounds)
-                        } else {
-                            let mut polar = scan.get_range_in_polar(i as u16);
-
-                            KartPoint::from_polar(polar.0 / 1000.0, polar.1).transform_to_grid(size)
+                    for (i, p) in scan.data.into_iter().enumerate() {
+                        // Filter out close or unlikely points
+                        if p.dist < 150 || p.confidence < 50 {
+                            continue;
                         }
-                    });
 
-                    for p in points {
-                        if let Ok(p) = p {
-                            grid.mark_occupied(p);
+                        // Convert LiDAR points into standard polar points
+                        let polar = scan.get_range_in_polar(i as u16);
+                        // Transform from polar to cartiesian
+                        let kart = KartPoint::from_polar(polar.0 / 1000.0, polar.1);
+                        // Apply linear transform to grid
+                        if let Ok(transformed) = kart.transform_to_grid(size) {
+                            grid.mark_occupied(transformed)
                         }
                     }
 
                     println!("{}", grid);
+                    //Clear terminal
+                    print!("\x1B[2J");
                 } else {
                     grid.reset()
                 }

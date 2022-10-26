@@ -66,6 +66,8 @@ impl<const N: usize> IndexMut<(usize, usize)> for Grid<N> {
 
 impl<const N: usize> Display for Grid<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let m = 10.0 / self.get_size().0 as f32;
+
         // Print numbers
         write!(f, "     ")?;
         for col_n in 0..self.data.len() {
@@ -86,7 +88,7 @@ impl<const N: usize> Display for Grid<N> {
                     write!(f, "| ")?;
                 }
             }
-            writeln!(f, "]{:>4}", i)?;
+            writeln!(f, "]{:>4} {:>4.2}m", i, 10.0 - (m * i as f32))?;
 
             // Add separating lines
             write!(f, "    ")?;
