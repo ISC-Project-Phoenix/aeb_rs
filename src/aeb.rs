@@ -48,10 +48,41 @@ impl<const GridN: usize> Aeb<GridN> {
     }
 
     /// Runs the collision checking algorithm with the current parameters.
+    /// The passed points will also be added to the occupancy grid, if desired.
     ///
     /// Returns true if the vehicle should brake.
-    pub fn collision_check(&mut self, points: &[KartPoint]) -> bool {
-        // Mark all detected obstacles as occupied on the grid
+    pub fn collision_check(&mut self, points: Option<&[KartPoint]>) -> bool {
+        // Add points
+        if let Some(p) = points { self.add_points(p) }
+
+        //TODO determine step
+        const STEP_MS: usize = 10;
+        //Convert ttc to millis
+        let ttc = (self.min_ttc / 1000.0) as usize;
+
+        // Collision check by integrating over our model
+        for timestep in (0..ttc).step_by(STEP_MS) {
+            todo!("Continue once model is complete")
+        }
+
+        self.grid.reset();//TODO remember to reset grid on each path
+        false
+    }
+
+    /// Updates the current velocity
+    pub fn update_velocity(&mut self, velocity: f32) {
+        self.velocity = velocity;
+    }
+
+    /// Updates the current ackermann steering angle, in degrees
+    pub fn update_steering(&mut self, steering_angle: f32) {
+        self.steering_angle = steering_angle;
+    }
+
+    /// Adds points to the grid to be used during the next collision check.
+    ///
+    /// Points that are < 15cm from the data source will be filtered out.
+    pub fn add_points(&mut self, points: &[KartPoint]) {
         for p in points {
             // If point is less than 15cm from kart, filter out
             if p.0 < 0.15 {
@@ -64,27 +95,5 @@ impl<const GridN: usize> Aeb<GridN> {
 
             self.grid.mark_occupied(p);
         }
-
-        //TODO determine step
-        const STEP_MS: usize = 10;
-        //Convert ttc to millis
-        let ttc = (self.min_ttc / 1000.0) as usize;
-
-        // Collision check by integrating over our model
-        for timestep in (0..ttc).step_by(STEP_MS) {
-            todo!("Continue once model is complete")
-        }
-
-        false
-    }
-
-    /// Updates the current velocity
-    pub fn update_velocity(&mut self, velocity: f32) {
-        self.velocity = velocity;
-    }
-
-    /// Updates the current ackermann steering angle, in degrees
-    pub fn update_steering(&mut self, steering_angle: f32) {
-        self.steering_angle = steering_angle;
     }
 }
