@@ -1,6 +1,7 @@
 use core::f32::consts::PI;
 use core::fmt::{Debug, Display, Formatter};
 use core::ops::{Index, IndexMut};
+use line_drawing::Midpoint;
 use micromath::F32;
 
 /// An nxn occupancy grid.
@@ -47,6 +48,153 @@ impl<const N: usize> Grid<N> {
     /// Resets the occupancy grid to a fully free state.
     pub fn reset(&mut self) {
         self.data = [[Cell::Unoccupied; N]; N];
+    }
+
+    /// Draws (Rasterizes) a filled polygon onto the grid. Lines must form a polygon, else this
+    /// function will fail. This function will not fault if a point falls off the grid.
+    ///
+    /// Be aware that this function will use usize*N stack space.
+    pub fn draw_polygon(&mut self, lines: &[Line]) {
+        // The first and last point on a row
+        #[derive(Default, Clone, Copy)]
+        struct RowReg {
+            start: usize,
+            end: Option<usize>,
+        }
+
+        // Array of the first and last points on each line. Row is index, col is in the reg
+        let mut ends: [Option<RowReg>; N] = [None; N];
+
+        // Draw the lines, and record the ends of each row
+        for p in lines
+            .iter()
+            .flat_map(|l| Midpoint::<f32, i64>::new(l.0, l.1))
+        {
+            // Ensure points are in bounds
+            if p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64 {
+                continue;
+            }
+
+            let x = p.0 as usize;
+            let y = p.1 as usize;
+
+            self.data[x][y] = Cell::Occupied;
+
+            // Register ends
+            if let Some(Some(reg)) = ends.get_mut(x).as_mut() {
+                if reg.start == y {
+                    continue;
+                }
+
+                // If point is left-more than start, it is the starting point
+                if y < reg.start {
+                    // Move old start to end if there is none (if some, then end will already be bigger)
+                    if reg.end.is_none() {
+                        reg.end = Some(reg.start)
+                    }
+                    reg.start = y
+                }
+                // If there was no end, this point must be the biggest. If there is, then replace if new point is bigger
+                else if reg.end.is_none() || reg.end.unwrap() < y {
+                    reg.end = Some(y)
+                }
+            } else {
+                ends[x] = Option::from(RowReg {
+                    start: y,
+                    end: None,
+                })
+            }
+        }
+
+        // Now fill in the inside of the polygon, bounded by the ends
+        for (x, reg) in ends.iter().enumerate() {
+            if let Some(reg) = reg {
+                // Ignore rows with only one cell filled
+                if let Some(end) = reg.end {
+                    for y in reg.start..end {
+                        self.data[x][y] = Cell::Occupied
+                    }
+                }
+            }
+        }
+    }
+
+    /// Checks if a filled polygon overlaps with any occupied space.
+    ///
+    /// - Lines must form a closed polygon, else this function will fail.
+    ///
+    /// - This function will not fault if a point falls off the grid.
+    ///
+    /// - Be aware that this function will use usize*N stack space.
+    pub fn polygon_collide(&self, lines: &[Line]) -> bool {
+        // The first and last point on a row
+        #[derive(Default, Clone, Copy)]
+        struct RowReg {
+            start: usize,
+            end: Option<usize>,
+        }
+
+        // Array of the first and last points on each line. Row is index, col is in the reg
+        let mut ends: [Option<RowReg>; N] = [None; N];
+
+        // Check the lines, and record the ends of each row
+        for p in lines
+            .iter()
+            .flat_map(|l| Midpoint::<f32, i64>::new(l.0, l.1))
+        {
+            // Ensure points are in bounds
+            if p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64 {
+                continue;
+            }
+
+            let x = p.0 as usize;
+            let y = p.1 as usize;
+
+            if self.data[x][y] == Cell::Occupied {
+                return true;
+            }
+
+            // Register ends
+            if let Some(Some(reg)) = ends.get_mut(x).as_mut() {
+                if reg.start == y {
+                    continue;
+                }
+
+                // If point is left-more than start, it is the starting point
+                if y < reg.start {
+                    // Move old start to end if there is none (if some, then end will already be bigger)
+                    if reg.end.is_none() {
+                        reg.end = Some(reg.start)
+                    }
+                    reg.start = y
+                }
+                // If there was no end, this point must be the biggest. If there is, then replace if new point is bigger
+                else if reg.end.is_none() || reg.end.unwrap() < y {
+                    reg.end = Some(y)
+                }
+            } else {
+                ends[x] = Option::from(RowReg {
+                    start: y,
+                    end: None,
+                })
+            }
+        }
+
+        // Now check the inside of the polygon, bounded by the ends
+        for (x, reg) in ends.iter().enumerate() {
+            if let Some(reg) = reg {
+                // Ignore rows with only one cell filled
+                if let Some(end) = reg.end {
+                    for y in reg.start..end {
+                        if self.data[x][y] == Cell::Occupied {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        false
     }
 }
 
@@ -100,6 +248,8 @@ impl<const N: usize> Display for Grid<N> {
         Ok(())
     }
 }
+
+pub type Line = ((f32, f32), (f32, f32));
 
 /// A cell in the grid
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -295,5 +445,27 @@ mod test {
         std::println!("point at: {:?}", point);
         std::println!("m={}m", 10.0 / 411.);
         std::println!("{}", grid)
+    }
+
+    #[test]
+    fn polygon_methods_work() {
+        let mut grid = Grid::<41>::new();
+
+        // Ensure this does not fault despite being OOB
+        grid.draw_polygon(&[
+            ((1.0, 1.0), (10.0, 10.0)),
+            ((1.0, 1.0), (1.0, 44.0)),
+            ((1.0, 44.0), (10.0, 10.0)),
+        ]);
+
+        std::println!("{}", grid);
+
+        let res = grid.polygon_collide(&[
+            ((1.0, 1.0), (10.0, 10.0)),
+            ((1.0, 1.0), (1.0, 14.0)),
+            ((1.0, 14.0), (10.0, 10.0)),
+        ]);
+
+        assert!(res)
     }
 }
