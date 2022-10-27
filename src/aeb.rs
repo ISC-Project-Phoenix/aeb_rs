@@ -63,10 +63,12 @@ impl<const GridN: usize> Aeb<GridN> {
         // Convert ttc to millis
         let ttc = (self.min_ttc * 1000.0) as usize;
 
+        let mut last_heading = 0.0f32;
         // Collision check by integrating over our model
         for timestep in (0..ttc).step_by(STEP_MS) {
             // Predict position at time with definite integral of forward kinematics
-            let (pos, heading) = self.predict_pos(timestep);
+            let (pos, heading) = self.predict_pos(timestep, last_heading);
+            last_heading = heading;
 
             let obb = self.create_obb(pos, heading);
 
@@ -87,7 +89,7 @@ impl<const GridN: usize> Aeb<GridN> {
     ///
     /// # Args
     /// - t: time in ms
-    pub fn predict_pos(&self, t: usize) -> (KartPoint, f32) {
+    pub fn predict_pos(&self, t: usize, heading: f32) -> (KartPoint, f32) {
         let t = t as f32 / 1000.0;
 
         if self.steering_angle == 0.0 {
@@ -96,12 +98,14 @@ impl<const GridN: usize> Aeb<GridN> {
         }
 
         // These are the forward kinematics equations, integrated over time. See: https://www.xarg.org/book/kinematics/ackerman-steering/
-        let orientation =
-            self.velocity * t * F32(self.steering_angle.to_radians()).tan() / self.wheelbase;
-        let x = self.velocity * t * F32(self.steering_angle.to_radians()).cos();
-        let y = self.velocity * t * F32(self.steering_angle.to_radians()).sin();
+        let x = self.velocity * t * F32(heading).cos();
+        let y = self.velocity * t * F32(heading).sin();
 
-        (KartPoint(x.0, y.0), orientation.0)
+        // I think we're essentially integrating heading again by passing it back in here
+        let heading =
+            self.velocity * t * F32(self.steering_angle.to_radians()).tan() / self.wheelbase;
+
+        (KartPoint(x.0, y.0), heading.0)
     }
 
     /// Creates the oriented bounding box given the karts position and yaw in rad.
@@ -203,14 +207,14 @@ mod test {
         let mut sys = Aeb::<71>::new(5.0, 0.0, 3.0, ((-0.5, 3.0), (0.5, -0.2)), 2.0);
 
         // Straight line
-        let pred = sys.predict_pos(1000);
+        let pred = sys.predict_pos(1000, 0.0);
         assert_eq!(pred.0 .0, 5.0);
         assert_eq!(pred.1, 0.0);
 
         sys.update_steering(-5.0);
 
         // Slight turn
-        let pred = sys.predict_pos(1000);
+        let pred = sys.predict_pos(1000, 0.0);
         std::println!("{:?}", pred)
     }
 
@@ -219,7 +223,7 @@ mod test {
         //TODO test this when phys working, OOB seems to be fine though, just the phys func is bad
         let mut sys = Aeb::<71>::new(5.0, 0.0, 1.5, ((-0.5, 2.0), (0.5, -0.2)), 2.0);
 
-        let pred = sys.predict_pos(1000);
+        let pred = sys.predict_pos(1000, 0.0);
         std::println!("{:?}", pred);
         std::println!(
             "{:?}",
