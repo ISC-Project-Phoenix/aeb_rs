@@ -7,7 +7,7 @@ pub struct Aeb<const GridN: usize> {
     grid: Grid<GridN>,
     /// Current velocity of the kart in m/s
     velocity: f32,
-    /// Current angle of the virtual ackermann wheel, in degrees
+    /// Current angle of the virtual ackermann wheel, in degrees, positive is right.
     steering_angle: f32,
     /// The distance between axles, in meters
     wheelbase: f32,
@@ -59,28 +59,21 @@ impl<const GridN: usize> Aeb<GridN> {
             self.add_points(p)
         }
 
-        //TODO determine step
         const STEP_MS: usize = 10;
         // Convert ttc to millis
-        let ttc = (self.min_ttc / 1000.0) as usize;
-        // Track yaw over time, in rad
-        let mut current_yaw = 0.0f32;
+        let ttc = (self.min_ttc * 1000.0) as usize;
 
         // Collision check by integrating over our model
         for timestep in (0..ttc).step_by(STEP_MS) {
-            let (pos, yaw) = self.predict_pos(timestep);
-            current_yaw += yaw;
+            // Predict position at time with definite integral of forward kinematics
+            let (pos, heading) = self.predict_pos(timestep);
 
-            if let Ok(obb) = self.create_obb(pos, current_yaw) {
-                // Actually collision check
-                if self.grid.polygon_collide(&obb) {
-                    self.grid.reset();
-                    return true;
-                }
-            } else {
-                // Since we are OOB now, just exit
+            let obb = self.create_obb(pos, heading);
+
+            // Actually collision check
+            if self.grid.polygon_collide(&obb) {
                 self.grid.reset();
-                break;
+                return true;
             }
         }
 
@@ -88,38 +81,33 @@ impl<const GridN: usize> Aeb<GridN> {
         false
     }
 
-    /// Predicts the future position of the kart given the currently configured params, and some
-    /// timestep t. Second tuple element is yaw change in radians, negative is left.
+    /// Predicts the future position of the kart given the currently configured params, at some time.
+    ///
+    /// Returns final (position, heading), where heading is in rad and negative if left.
     ///
     /// # Args
-    /// - t: timestep in ms
-    fn predict_pos(&self, t: usize) -> (KartPoint, f32) {
-        //TODO this is wrong, figure out why
+    /// - t: time in ms
+    pub fn predict_pos(&self, t: usize) -> (KartPoint, f32) {
         let t = t as f32 / 1000.0;
-        let displacement = t * self.velocity;
 
         if self.steering_angle == 0.0 {
+            let displacement = t * self.velocity;
             return (KartPoint(displacement, 0.0), 0.0);
         }
 
-        let turn_radius = self.wheelbase / F32(self.steering_angle.to_radians()).tan();
-        let orientation_change = displacement / turn_radius;
-        let final_normal_dir = (-orientation_change.sin(), orientation_change.cos());
+        // These are the forward kinematics equations, integrated over time. See: https://www.xarg.org/book/kinematics/ackerman-steering/
+        let orientation =
+            self.velocity * t * F32(self.steering_angle.to_radians()).tan() / self.wheelbase;
+        let x = self.velocity * t * F32(self.steering_angle.to_radians()).cos();
+        let y = self.velocity * t * F32(self.steering_angle.to_radians()).sin();
 
-        let new_pos = KartPoint(
-            (turn_radius * final_normal_dir.1).into(),
-            (turn_radius * final_normal_dir.0).into(),
-        );
-
-        (new_pos, orientation_change.0)
+        (KartPoint(x.0, y.0), orientation.0)
     }
 
     /// Creates the oriented bounding box given the karts position and yaw in rad.
-    fn create_obb(
-        &self,
-        pos: KartPoint,
-        yaw: f32,
-    ) -> Result<[((f32, f32), (f32, f32)); 4], GridErr> {
+    ///
+    /// This box may lie outside the grid partially or totally.
+    pub fn create_obb(&self, pos: KartPoint, yaw: f32) -> [((f32, f32), (f32, f32)); 4] {
         let n = self.grid.get_size();
 
         // Swap axis labels to keep me sane
@@ -129,49 +117,50 @@ impl<const GridN: usize> Aeb<GridN> {
         // Define the box's lines
         let tl_to_tr = (
             Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + tly), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
             Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + tly), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
         );
         let tr_to_br = (
             Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + tly), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
             Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + bry), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
         );
         let br_to_bl = (
             Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + bry), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
             Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + bry), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
         );
         let bl_to_tl = (
             Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + bry), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
             Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + tly), pos, yaw)
-                .transform_to_grid_f(n)?
+                .transform_to_grid_f(n)
                 .raw(),
         );
 
-        Ok([tl_to_tr, tr_to_br, br_to_bl, bl_to_tl])
+        [tl_to_tr, tr_to_br, br_to_bl, bl_to_tl]
     }
 
-    /// Rotates a point about another, by the angle in yaw.
+    /// Rotates a point about another, by the angle in rad.
     fn rotate_point_about(p: KartPoint, origin: KartPoint, angle: f32) -> KartPoint {
+        //TODO this is definity not working lmao
         let angle = F32(angle);
         let (y1, x1) = p.into();
         // Matrix rotation
         let x2 = x1 * angle.cos() - y1 * angle.sin();
         let y2 = x1 * angle.sin() + y1 * angle.cos();
 
-        KartPoint(x2.0 + origin.1, y2.0 + origin.0)
+        KartPoint(x2.0 + origin.0, y2.0 + origin.1)
     }
 
     /// Updates the current velocity
@@ -215,7 +204,7 @@ mod test {
 
         // Straight line
         let pred = sys.predict_pos(1000);
-        assert_eq!(pred.0.0, 5.0);
+        assert_eq!(pred.0 .0, 5.0);
         assert_eq!(pred.1, 0.0);
 
         sys.update_steering(-5.0);
@@ -228,11 +217,15 @@ mod test {
     #[test]
     fn obb_created_correctly() {
         //TODO test this when phys working, OOB seems to be fine though, just the phys func is bad
-        let mut sys = Aeb::<71>::new(5.0, 0.0, 3.0, ((-0.5, 3.0), (0.5, -0.2)), 2.0);
+        let mut sys = Aeb::<71>::new(5.0, 0.0, 1.5, ((-0.5, 2.0), (0.5, -0.2)), 2.0);
 
-        let pred = sys.predict_pos(100);
+        let pred = sys.predict_pos(1000);
         std::println!("{:?}", pred);
-        let obb = sys.create_obb(pred.0, -1.3).unwrap();
+        std::println!(
+            "{:?}",
+            pred.0.transform_to_grid(sys.grid.get_size()).unwrap()
+        );
+        let obb = sys.create_obb(pred.0, -2.0);
         std::println!("{:?}", obb);
 
         sys.grid.draw_polygon(&obb);

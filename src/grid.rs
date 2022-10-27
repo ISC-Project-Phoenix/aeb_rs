@@ -311,7 +311,7 @@ pub struct GridPointf(f32, f32);
 impl GridPointf {
     /// Transforms this point into a grid point, if in bounds.
     pub fn into_gridpoint(self, n: GridSize) -> Result<GridPoint, GridErr> {
-        if self.0 < 0.0 || self.1 < 0.0 || self.0 > n.raw() as f32 || self.1 > n.raw() as f32 {
+        if self.0 < 0.0 || self.1 < 0.0 || self.0 >= n.raw() as f32 || self.1 >= n.raw() as f32 {
             Err(GridErr::OutOfBounds)
         } else {
             Ok(GridPoint(self.0 as usize, self.1 as usize))
@@ -334,12 +334,12 @@ impl KartPoint {
     /// Transforms a point from the frame of the kart to the frame of the grid, aligning to grid squares. This function will
     /// error if the kart point lands outside of the grid.
     pub fn transform_to_grid(&self, n: GridSize) -> Result<GridPoint, GridErr> {
-        self.transform_to_grid_f(n)?.into_gridpoint(n)
+        self.transform_to_grid_f(n).into_gridpoint(n)
     }
 
     /// Transforms a point from the frame of the kart to the frame of the grid. This function will not
     /// apply any bounds checking, use [Self::transform_to_grid] to bounds check and align points to grid.
-    pub fn transform_to_grid_f(&self, n: GridSize) -> Result<GridPointf, GridErr> {
+    pub fn transform_to_grid_f(&self, n: GridSize) -> GridPointf {
         let GridSize(n) = n;
 
         // m is our grid scale (ie. units per grid square side)
@@ -351,7 +351,7 @@ impl KartPoint {
         let out_r = n as f32 - (r / m);
         let out_c = ((n as f32 - 1.) / 2.) + (c / m);
 
-        Ok(GridPointf(out_r, out_c))
+        GridPointf(out_r, out_c)
     }
 
     /// Creates a point in kart frame from a polar coordinate in kart frame.
