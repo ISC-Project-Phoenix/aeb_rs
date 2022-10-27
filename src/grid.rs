@@ -1,3 +1,4 @@
+use core::cmp::max;
 use core::f32::consts::PI;
 use core::fmt::{Debug, Display, Formatter};
 use core::ops::{Index, IndexMut};
@@ -70,15 +71,9 @@ impl<const N: usize> Grid<N> {
             .iter()
             .flat_map(|l| Midpoint::<f32, i64>::new(l.0, l.1))
         {
-            // Ensure points are in bounds
-            if p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64 {
-                continue;
-            }
-
-            let x = p.0 as usize;
-            let y = p.1 as usize;
-
-            self.data[x][y] = Cell::Occupied;
+            // Handle when OOB is negative
+            let x = max(p.0, 0) as usize;
+            let y = max(p.1, 0) as usize;
 
             // Register ends
             if let Some(Some(reg)) = ends.get_mut(x).as_mut() {
@@ -98,11 +93,17 @@ impl<const N: usize> Grid<N> {
                 else if reg.end.is_none() || reg.end.unwrap() < y {
                     reg.end = Some(y)
                 }
-            } else {
+            } else if x < N {
                 ends[x] = Option::from(RowReg {
                     start: y,
                     end: None,
                 })
+            }
+
+            // Mark line square, if in bounds. Do this here as we still want to fill in the area via ends
+            // even if this point is OOB
+            if !(p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64) {
+                self.data[x][y] = Cell::Occupied;
             }
         }
 
@@ -112,7 +113,10 @@ impl<const N: usize> Grid<N> {
                 // Ignore rows with only one cell filled
                 if let Some(end) = reg.end {
                     for y in reg.start..end {
-                        self.data[x][y] = Cell::Occupied
+                        // Bounds check
+                        if !(x >= N || y >= N) {
+                            self.data[x][y] = Cell::Occupied
+                        }
                     }
                 }
             }
@@ -142,17 +146,9 @@ impl<const N: usize> Grid<N> {
             .iter()
             .flat_map(|l| Midpoint::<f32, i64>::new(l.0, l.1))
         {
-            // Ensure points are in bounds
-            if p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64 {
-                continue;
-            }
-
-            let x = p.0 as usize;
-            let y = p.1 as usize;
-
-            if self.data[x][y] == Cell::Occupied {
-                return true;
-            }
+            // Handle when OOB is negative
+            let x = max(p.0, 0) as usize;
+            let y = max(p.1, 0) as usize;
 
             // Register ends
             if let Some(Some(reg)) = ends.get_mut(x).as_mut() {
@@ -172,11 +168,18 @@ impl<const N: usize> Grid<N> {
                 else if reg.end.is_none() || reg.end.unwrap() < y {
                     reg.end = Some(y)
                 }
-            } else {
+            } else if x < N {
                 ends[x] = Option::from(RowReg {
                     start: y,
                     end: None,
                 })
+            }
+
+            // Bounds check, then check for collision on the line
+            if !(p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64)
+                && self.data[x][y] == Cell::Occupied
+            {
+                return true;
             }
         }
 
@@ -186,7 +189,8 @@ impl<const N: usize> Grid<N> {
                 // Ignore rows with only one cell filled
                 if let Some(end) = reg.end {
                     for y in reg.start..end {
-                        if self.data[x][y] == Cell::Occupied {
+                        // Bounds check, then check for collision
+                        if !(x >= N || y >= N) && self.data[x][y] == Cell::Occupied {
                             return true;
                         }
                     }

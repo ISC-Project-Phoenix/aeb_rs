@@ -25,7 +25,7 @@ fn main() {
     let mut ld06 = LD06::new(serial);
 
     // Create grid
-    let mut grid = Grid::<71>::new();
+    let mut grid = Grid::<31>::new();
     let size = grid.get_size();
 
     loop {
