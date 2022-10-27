@@ -304,10 +304,42 @@ impl Into<(usize, usize)> for GridPoint {
     }
 }
 
+/// A point in gridspace, not aligned to the grid nor bounds checked.
+#[derive(Copy, Clone, PartialEq, Debug, PartialOrd)]
+pub struct GridPointf(f32, f32);
+
+impl GridPointf {
+    /// Transforms this point into a grid point, if in bounds.
+    pub fn into_gridpoint(self, n: GridSize) -> Result<GridPoint, GridErr> {
+        if self.0 < 0.0 || self.1 < 0.0 || self.0 > n.raw() as f32 || self.1 > n.raw() as f32 {
+            Err(GridErr::OutOfBounds)
+        } else {
+            Ok(GridPoint(self.0 as usize, self.1 as usize))
+        }
+    }
+
+    pub fn raw(self) -> (f32, f32) {
+        self.into()
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<(f32, f32)> for GridPointf {
+    fn into(self) -> (f32, f32) {
+        (self.0, self.1)
+    }
+}
+
 impl KartPoint {
-    /// Transforms a point from the frame of the kart to the frame of the grid. This function will
+    /// Transforms a point from the frame of the kart to the frame of the grid, aligning to grid squares. This function will
     /// error if the kart point lands outside of the grid.
     pub fn transform_to_grid(&self, n: GridSize) -> Result<GridPoint, GridErr> {
+        self.transform_to_grid_f(n)?.into_gridpoint(n)
+    }
+
+    /// Transforms a point from the frame of the kart to the frame of the grid. This function will not
+    /// apply any bounds checking, use [Self::transform_to_grid] to bounds check and align points to grid.
+    pub fn transform_to_grid_f(&self, n: GridSize) -> Result<GridPointf, GridErr> {
         let GridSize(n) = n;
 
         // m is our grid scale (ie. units per grid square side)
@@ -319,34 +351,27 @@ impl KartPoint {
         let out_r = n as f32 - (r / m);
         let out_c = ((n as f32 - 1.) / 2.) + (c / m);
 
-        // Point is too far off the grid forward or left
-        if out_r < 0.0 || out_c < 0.0 {
-            return Err(GridErr::OutOfBounds);
-        }
-
-        // Round to nearest grid square to allow for use as an index.
-        let out_r = out_r as usize;
-        let out_c = out_c as usize;
-
-        // Bounds check backwards and right
-        if out_c < n && out_r < n {
-            Ok(GridPoint(out_r, out_c))
-        } else {
-            Err(GridErr::OutOfBounds)
-        }
+        Ok(GridPointf(out_r, out_c))
     }
 
     /// Creates a point in kart frame from a polar coordinate in kart frame.
     /// Note that 0 degrees is still pointing to the right.
     /// Theta is in degrees.
     pub fn from_polar(r: f32, theta: f32) -> Self {
-        let theta = (F32::from(theta) * PI) / 180.0;
+        let theta = F32(theta.to_radians());
 
         // x and y are swapped from normal to reflect the karts axis
         let x = r * theta.sin();
         let y = r * theta.cos();
 
         KartPoint(x.0, y.0)
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<(f32, f32)> for KartPoint {
+    fn into(self) -> (f32, f32) {
+        (self.0, self.1)
     }
 }
 
@@ -367,6 +392,9 @@ mod test {
 
         let k = KartPoint(4.0, 0.0);
         assert_eq!(k.transform_to_grid(GridSize(5)).unwrap(), GridPoint(3, 2));
+
+        let k = KartPoint(8.0, 5.5);
+        assert_eq!(k.transform_to_grid(GridSize(5)).unwrap(), GridPoint(1, 4));
 
         //Test exact max bounds
         let k = KartPoint(10.0, 0.0);
