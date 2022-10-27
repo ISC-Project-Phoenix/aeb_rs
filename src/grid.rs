@@ -1,5 +1,4 @@
 use core::cmp::max;
-use core::f32::consts::PI;
 use core::fmt::{Debug, Display, Formatter};
 use core::ops::{Index, IndexMut};
 use line_drawing::Midpoint;
