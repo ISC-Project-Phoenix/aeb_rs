@@ -14,6 +14,8 @@ pub struct Aeb<const GridN: usize> {
     /// The collision box of the vehicle, defined by the top left point of the box relative to the center of the rear axel,
     /// and the bottom right point relative to the rear axel.
     collision_box: ((f32, f32), (f32, f32)),
+    /// Rear axel to range sensor transform
+    axel_to_range: KartPoint,
     /// The minimum allowed time to collision.
     min_ttc: f32,
 }
@@ -28,12 +30,14 @@ impl<const GridN: usize> Aeb<GridN> {
     /// - wheelbase: distance between axles, in meters.
     /// - collision_box: collision bounding box, defined as the top left and bottom right points relative
     /// to the center of the rear axel. This is in normal coordinates.
+    /// - axel_to_sensor: The transform of the axel to the front range sensor, in the kart frame.
     /// - min_ttc: the minimum allowed time to collision.
     pub fn new(
         start_vel: f32,
         start_wheel_angle: f32,
         wheelbase: f32,
         collision_box: ((f32, f32), (f32, f32)),
+        axel_to_sensor: KartPoint,
         min_ttc: f32,
     ) -> Self {
         let grid = Grid::<GridN>::new();
@@ -45,6 +49,7 @@ impl<const GridN: usize> Aeb<GridN> {
             wheelbase,
             collision_box,
             min_ttc,
+            axel_to_range: axel_to_sensor,
         }
     }
 
@@ -92,7 +97,13 @@ impl<const GridN: usize> Aeb<GridN> {
 
         if self.steering_angle == 0.0 {
             let displacement = t * self.velocity;
-            return (KartPoint(displacement, 0.0), 0.0);
+            return (
+                KartPoint(
+                    displacement - self.axel_to_range.0,
+                    0.0 - self.axel_to_range.1,
+                ),
+                0.0,
+            );
         }
 
         // Forward kinematics equations integrated over time
@@ -109,7 +120,11 @@ impl<const GridN: usize> Aeb<GridN> {
         let heading =
             self.velocity * t * F32(self.steering_angle.to_radians()).tan() / self.wheelbase;
 
-        (KartPoint(x.0, y.0), heading.0)
+        // Translate the rear axel to its real location by pushing it back by its distance to the range sensor
+        (
+            KartPoint(x.0 - self.axel_to_range.0, y.0 - self.axel_to_range.1),
+            heading.0,
+        )
     }
 
     /// Creates the oriented bounding box given the karts position and yaw in rad.
@@ -164,8 +179,8 @@ impl<const GridN: usize> Aeb<GridN> {
         let angle = F32(angle);
         let (x1, y1) = p.into();
         // Matrix rotation
-        let x2 = (x1-origin.0) * angle.cos() - (y1-origin.1) * angle.sin() + origin.0;
-        let y2 = (x1-origin.0) * angle.sin() + (y1-origin.1) * angle.cos() + origin.1;
+        let x2 = (x1 - origin.0) * angle.cos() - (y1 - origin.1) * angle.sin() + origin.0;
+        let y2 = (x1 - origin.0) * angle.sin() + (y1 - origin.1) * angle.cos() + origin.1;
 
         KartPoint(x2.0, y2.0)
     }
@@ -202,16 +217,24 @@ impl<const GridN: usize> Aeb<GridN> {
 #[cfg(test)]
 mod test {
     extern crate std;
+    use crate::grid::KartPoint;
     use crate::Aeb;
     use std::prelude::rust_2021::*;
 
     #[test]
     fn prediction_works() {
-        let mut sys = Aeb::<71>::new(5.0, 0.0, 3.0, ((-0.5, 3.0), (0.5, -0.2)), 2.0);
+        let mut sys = Aeb::<71>::new(
+            5.0,
+            0.0,
+            3.0,
+            ((-0.5, 3.0), (0.5, -0.2)),
+            KartPoint(3.1, 0.0),
+            2.0,
+        );
 
-        // Straight line
+        // Straight line, with translation to be about sensor
         let pred = sys.predict_pos(1000);
-        assert_eq!(pred.0 .0, 5.0);
+        assert_eq!(pred.0 .0, 5.0 - 3.1);
         assert_eq!(pred.1, 0.0);
 
         sys.update_steering(-5.0);

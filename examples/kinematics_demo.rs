@@ -1,4 +1,4 @@
-use aeb_rs::grid::Grid;
+use aeb_rs::grid::{Grid, KartPoint};
 use aeb_rs::Aeb;
 use std::thread::sleep;
 use std::time::Duration;
@@ -6,8 +6,15 @@ use std::time::Duration;
 /// Visualizes the forward kinematics used in collision detection. Visualized squares are exactly the same that will be collision checked in real AEB.
 fn main() {
     // Please don't actually use AEB like this lol
-    let mut aeb = Aeb::<51>::new(6.0, 0.0, 1.08, ((-0.5, 1.2), (0.5, -0.2)), 2.0);
-    let mut grid = Grid::<51>::new();
+    let mut aeb = Aeb::<31>::new(
+        6.0,
+        0.0,
+        1.08,
+        ((-0.5, 1.2), (0.5, -0.2)),
+        KartPoint(1.2, 0.0),
+        2.0,
+    );
+    let mut grid = Grid::<31>::new();
 
     // Look over some steering angles
     for theta in 0..40 {

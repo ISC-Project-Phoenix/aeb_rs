@@ -281,7 +281,7 @@ impl GridSize {
     }
 }
 
-/// A point in the reference frame of the kart.
+/// A point in the reference frame of the kart, where (0,0) is the location of the front range sensor.
 ///
 /// This is in (x,y), where x is parallel to the kart and positive y is perpendicular to the right of the kart.
 #[derive(Copy, Clone, PartialEq, Debug, PartialOrd)]
