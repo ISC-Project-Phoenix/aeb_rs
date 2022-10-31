@@ -1,3 +1,5 @@
+//! Generic deterministic occupancy grid and associated utilities
+
 use core::cmp::max;
 use core::fmt::{Debug, Display, Formatter};
 use core::ops::{Index, IndexMut};
