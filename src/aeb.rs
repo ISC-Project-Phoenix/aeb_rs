@@ -124,34 +124,34 @@ impl<const GridN: usize> Aeb<GridN> {
 
         // Define the box's lines
         let tl_to_tr = (
-            Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + tly), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + tly, pred_x + tlx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
-            Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + tly), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + bry, pred_x + tlx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
         );
         let tr_to_br = (
-            Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + tly), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + bry, pred_x + tlx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
-            Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + bry), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + bry, pred_x + brx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
         );
         let br_to_bl = (
-            Self::rotate_point_about(KartPoint(pred_x + brx, pred_y + bry), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + bry, pred_x + brx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
-            Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + bry), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + tly, pred_x + brx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
         );
         let bl_to_tl = (
-            Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + bry), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + tly, pred_x + brx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
-            Self::rotate_point_about(KartPoint(pred_x + tlx, pred_y + tly), pos, yaw)
+            Self::rotate_point_about(KartPoint(pred_y + tly, pred_x + tlx), pos, yaw)
                 .transform_to_grid_f(n)
                 .raw(),
         );
@@ -161,22 +161,21 @@ impl<const GridN: usize> Aeb<GridN> {
 
     /// Rotates a point about another, by the angle in rad.
     fn rotate_point_about(p: KartPoint, origin: KartPoint, angle: f32) -> KartPoint {
-        //TODO this is definity not working lmao
         let angle = F32(angle);
-        let (y1, x1) = p.into();
+        let (x1, y1) = p.into();
         // Matrix rotation
-        let x2 = x1 * angle.cos() - y1 * angle.sin();
-        let y2 = x1 * angle.sin() + y1 * angle.cos();
+        let x2 = (x1-origin.0) * angle.cos() - (y1-origin.1) * angle.sin() + origin.0;
+        let y2 = (x1-origin.0) * angle.sin() + (y1-origin.1) * angle.cos() + origin.1;
 
-        KartPoint(x2.0 + origin.0, y2.0 + origin.1)
+        KartPoint(x2.0, y2.0)
     }
 
-    /// Updates the current velocity
+    /// Updates the current velocity, in m/s.
     pub fn update_velocity(&mut self, velocity: f32) {
         self.velocity = velocity;
     }
 
-    /// Updates the current ackermann steering angle, in degrees
+    /// Updates the current ackermann steering angle, in degrees.
     pub fn update_steering(&mut self, steering_angle: f32) {
         self.steering_angle = steering_angle;
     }
@@ -220,24 +219,16 @@ mod test {
         // Slight turn
         let pred = sys.predict_pos(1000);
         std::println!("{:?}", pred)
+        //TODO create tests based off of IRL data
     }
 
     #[test]
     fn obb_created_correctly() {
-        //TODO test this when phys working, OOB seems to be fine though, just the phys func is bad
-        let mut sys = Aeb::<71>::new(5.0, 0.0, 1.5, ((-0.5, 2.0), (0.5, -0.2)), 2.0);
+        //TODO mostly test that points are rotated correctly
+    }
 
-        let pred = sys.predict_pos(1000);
-        std::println!("{:?}", pred);
-        std::println!(
-            "{:?}",
-            pred.0.transform_to_grid(sys.grid.get_size()).unwrap()
-        );
-        let obb = sys.create_obb(pred.0, -2.0);
-        std::println!("{:?}", obb);
-
-        sys.grid.draw_polygon(&obb);
-
-        std::println!("{}", sys.grid)
+    #[test]
+    fn full_aeb_works() {
+        //TODO also using the real data, after the above two
     }
 }
