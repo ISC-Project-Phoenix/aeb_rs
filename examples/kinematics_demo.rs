@@ -5,14 +5,18 @@ use std::time::Duration;
 
 /// Visualizes the forward kinematics used in collision detection. Visualized squares are exactly the same that will be collision checked in real AEB.
 fn main() {
+    //V len = 202cm
+    //H width = 135cm
+    //Axel to Lidar = 143cm baby lidar
+
     // Please don't actually use AEB like this lol
     let mut aeb = Aeb::<31>::new(
-        6.0,
+        3.0,
         0.0,
         1.08,
-        ((-0.5, 1.2), (0.5, -0.2)),
-        KartPoint(1.2, 0.0),
-        2.0,
+        ((-0.675, 1.43), (0.675, -0.59)),
+        KartPoint(1.43, 0.0),
+        3.0,
     );
     let mut grid = Grid::<31>::new();
 
@@ -21,7 +25,7 @@ fn main() {
         aeb.update_steering(theta as f32);
 
         // Simulate 2 seconds into the future
-        for t in (0..2000).step_by(20) {
+        for t in (0..3000).step_by(20) {
             let pred = aeb.predict_pos(t);
 
             if let Ok(point) = pred.0.transform_to_grid(grid.get_size()) {
