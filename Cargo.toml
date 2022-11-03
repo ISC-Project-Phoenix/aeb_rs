@@ -1,6 +1,7 @@
 [package]
 name = "aeb_rs"
 version = "0.1.0"
+authors = ['Andrew Ealovega <Andrew@Ealovega.dev>']
 edition = "2021"
 
 [dependencies]

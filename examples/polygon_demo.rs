@@ -2,6 +2,8 @@ use aeb_rs::grid::Grid;
 use nalgebra::{max, Point2, Translation2};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+
+/// Demos polygon drawing on the occupancy grid by bouncing a box around.
 fn main() {
     let mut grid = Grid::<41>::new();
     let n = grid.get_size().raw() as f32;

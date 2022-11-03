@@ -7,6 +7,8 @@ use line_drawing::Midpoint;
 use micromath::F32;
 
 /// An nxn occupancy grid.
+///
+/// n must be odd, and < f32::MAX. This is verified at compile time.
 #[derive(Debug)]
 pub struct Grid<const N: usize> {
     data: [[Cell; N]; N],
@@ -22,7 +24,7 @@ impl<const N: usize> Grid<N> {
         N
     };
 
-    /// Creates a new grid. This function will panic if N is even.
+    /// Creates a new grid.
     pub const fn new() -> Self {
         // Force the compiler to not remove _SIZE
         let _ = Self::_SIZE;
@@ -254,6 +256,7 @@ impl<const N: usize> Display for Grid<N> {
     }
 }
 
+/// A line given by two vertices. The order of vertices does not matter.
 pub type Line = ((f32, f32), (f32, f32));
 
 /// A cell in the grid
@@ -263,7 +266,7 @@ pub enum Cell {
     Unoccupied,
 }
 
-/// Grid accosted errors
+/// Grid associated errors
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum GridErr {
     /// Grid point was OOB.

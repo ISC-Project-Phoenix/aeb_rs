@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["aeb_rs","byteorder","hash32","heapless","libm","line_drawing","lock_api","micromath","num_traits","scopeguard","spin","stable_deref_trait"];

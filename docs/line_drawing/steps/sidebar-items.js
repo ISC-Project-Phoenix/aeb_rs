@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Steps","An iterator that returns `(start, end)` tuples from the walk."]]};

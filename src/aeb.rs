@@ -1,10 +1,10 @@
-use crate::grid::{Grid, GridErr, KartPoint};
+use crate::grid::{Grid, KartPoint};
 use micromath::F32;
 
 /// The entrypoint to the automatic emergency braking algorithm.
-pub struct Aeb<const GridN: usize> {
+pub struct Aeb<const GRID_N: usize> {
     /// The occupancy grid
-    grid: Grid<GridN>,
+    grid: Grid<GRID_N>,
     /// Current velocity of the kart in m/s
     velocity: f32,
     /// Current angle of the virtual ackermann wheel, in degrees, positive is right.
@@ -20,7 +20,7 @@ pub struct Aeb<const GridN: usize> {
     min_ttc: f32,
 }
 
-impl<const GridN: usize> Aeb<GridN> {
+impl<const GRID_N: usize> Aeb<GRID_N> {
     /// Configures AEB.
     ///
     /// # Config
@@ -40,7 +40,7 @@ impl<const GridN: usize> Aeb<GridN> {
         axel_to_sensor: KartPoint,
         min_ttc: f32,
     ) -> Self {
-        let grid = Grid::<GridN>::new();
+        let grid = Grid::<GRID_N>::new();
 
         Self {
             grid,
@@ -57,8 +57,8 @@ impl<const GridN: usize> Aeb<GridN> {
     /// The passed points will also be added to the occupancy grid, if desired.
     /// After this call, the grid will be cleared.
     ///
-    /// Returns true if the vehicle should brake.
-    pub fn collision_check(&mut self, points: Option<&[KartPoint]>) -> bool {
+    /// Returns true if the vehicle should brake, along with it's collision time in ms.
+    pub fn collision_check(&mut self, points: Option<&[KartPoint]>) -> (bool, usize) {
         // Add points
         if let Some(p) = points {
             self.add_points(p)
@@ -78,12 +78,12 @@ impl<const GridN: usize> Aeb<GridN> {
             // Actually collision check
             if self.grid.polygon_collide(&obb) {
                 self.grid.reset();
-                return true;
+                return (true, timestep);
             }
         }
 
         self.grid.reset();
-        false
+        (false, 0)
     }
 
     /// Predicts the future position of the kart given the currently configured params, at some time.
@@ -193,6 +193,14 @@ impl<const GridN: usize> Aeb<GridN> {
     /// Updates the current ackermann steering angle, in degrees.
     pub fn update_steering(&mut self, steering_angle: f32) {
         self.steering_angle = steering_angle;
+    }
+
+    /// Updates the minimum allowed time to collision, in seconds.
+    ///
+    /// The minimum time to collision will be the boundary that we will collision detect to, ie
+    /// the minimum tolerated collision time.
+    pub fn update_ttc(&mut self, min_ttc: f32) {
+        self.min_ttc = min_ttc
     }
 
     /// Adds points to the grid to be used during the next collision check.

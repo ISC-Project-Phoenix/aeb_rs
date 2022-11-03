@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Octant","A simple octant struct for transforming line points."]]};
