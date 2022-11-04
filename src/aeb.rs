@@ -109,7 +109,7 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
             );
         }
 
-        // Forward kinematics equations integrated over time
+        // Forward kinematics equations integrated over time. Based on: https://www.xarg.org/book/kinematics/ackerman-steering/
         let x = l * (1.0 / F32::tan(phi)) * F32::sin((s * t * F32::tan(phi)) / l);
         let y = l * (1.0 / F32::tan(phi)) * (-F32::cos((s * t * F32::tan(phi)) / l) + 1.0);
 
