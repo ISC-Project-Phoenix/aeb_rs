@@ -94,9 +94,12 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
     /// - t: time in ms
     pub fn predict_pos(&self, t: usize) -> (KartPoint, f32) {
         let t = t as f32 / 1000.0;
+        let phi = F32(self.steering_angle.to_radians());
+        let s = self.velocity;
+        let l = self.wheelbase;
 
-        if self.steering_angle == 0.0 {
-            let displacement = t * self.velocity;
+        if phi == 0.0 {
+            let displacement = t * s;
             return (
                 KartPoint(
                     displacement - self.axel_to_range.0,
@@ -107,18 +110,11 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
         }
 
         // Forward kinematics equations integrated over time
-        let x = (self.wheelbase * (self.velocity * F32(self.steering_angle.to_radians()) * t))
-            .sin()
-            / F32(self.steering_angle.to_radians());
-        let y = (self.wheelbase
-            * (-((self.velocity * F32(self.steering_angle.to_radians()) * t) / self.wheelbase)
-                .cos()
-                + 1.0))
-            / F32(self.steering_angle.to_radians());
+        let x = F32::sin(l * (s * phi * t)) / phi;
+        let y = (l * (-F32::cos((s * phi * t) / l) + 1.0)) / phi;
 
         // Integrate heading separately for OBB
-        let heading =
-            self.velocity * t * F32(self.steering_angle.to_radians()).tan() / self.wheelbase;
+        let heading = s * t * phi.tan() / l;
 
         // Translate the rear axel to its real location by pushing it back by its distance to the range sensor
         (
