@@ -110,11 +110,11 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
         }
 
         // Forward kinematics equations integrated over time
-        let x = F32::sin(l * (s * phi * t)) / phi;
-        let y = (l * (-F32::cos((s * phi * t) / l) + 1.0)) / phi;
+        let x = l * (1.0 / F32::tan(phi)) * F32::sin((s * t * F32::tan(phi)) / l);
+        let y = l * (1.0 / F32::tan(phi)) * (-F32::cos((s * t * F32::tan(phi)) / l) + 1.0);
 
         // Integrate heading separately for OBB
-        let heading = s * t * phi.tan() / l;
+        let heading = (s * t * phi.tan()) / l;
 
         // Translate the rear axel to its real location by pushing it back by its distance to the range sensor
         (
