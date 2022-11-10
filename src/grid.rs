@@ -54,11 +54,32 @@ impl<const N: usize> Grid<N> {
         self.data = [[Cell::Unoccupied; N]; N];
     }
 
-    /// Draws (Rasterizes) a filled polygon onto the grid. Lines must form a polygon, else this
-    /// function will fail. This function will not fault if a point falls off the grid.
+    /// Draws (Rasterizes) a filled polygon onto the grid.
     ///
-    /// Be aware that this function will use usize*N stack space.
+    /// - Lines must form a closed polygon, else this function will fail.
+    ///
+    /// - This function will not fault if a point falls off the grid.
+    ///
+    /// - Be aware that this function will use usize*N stack space.
     pub fn draw_polygon(&mut self, lines: &[Line]) {
+        self.walk_polygon(lines, |cell, _, _| *cell = Cell::Occupied)
+    }
+
+    /// Checks if a filled polygon overlaps with any occupied space.
+    ///
+    /// - Lines must form a closed polygon, else this function will fail.
+    ///
+    /// - This function will not fault if a point falls off the grid.
+    ///
+    /// - Be aware that this function will use usize*N stack space.
+    pub fn polygon_collide(&mut self, lines: &[Line]) -> bool {
+        let mut collided = false;
+        self.walk_polygon(lines, |cell, _, _| collided = *cell == Cell::Occupied);
+        collided
+    }
+
+    /// Calls the closure on each cell filled by the polygon defined by lines.
+    fn walk_polygon<F: FnMut(&mut Cell, usize, usize)>(&mut self, lines: &[Line], mut visitor: F) {
         // The first and last point on a row
         #[derive(Default, Clone, Copy)]
         struct RowReg {
@@ -106,7 +127,7 @@ impl<const N: usize> Grid<N> {
             // Mark line square, if in bounds. Do this here as we still want to fill in the area via ends
             // even if this point is OOB
             if !(p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64) {
-                self.data[x][y] = Cell::Occupied;
+                visitor(self.data[x].get_mut(y).unwrap(), x, y);
             }
         }
 
@@ -118,90 +139,12 @@ impl<const N: usize> Grid<N> {
                     for y in reg.start..end {
                         // Bounds check
                         if !(x >= N || y >= N) {
-                            self.data[x][y] = Cell::Occupied
+                            visitor(self.data[x].get_mut(y).unwrap(), x, y);
                         }
                     }
                 }
             }
         }
-    }
-
-    /// Checks if a filled polygon overlaps with any occupied space.
-    ///
-    /// - Lines must form a closed polygon, else this function will fail.
-    ///
-    /// - This function will not fault if a point falls off the grid.
-    ///
-    /// - Be aware that this function will use usize*N stack space.
-    pub fn polygon_collide(&self, lines: &[Line]) -> bool {
-        // The first and last point on a row
-        #[derive(Default, Clone, Copy)]
-        struct RowReg {
-            start: usize,
-            end: Option<usize>,
-        }
-
-        // Array of the first and last points on each line. Row is index, col is in the reg
-        let mut ends: [Option<RowReg>; N] = [None; N];
-
-        // Check the lines, and record the ends of each row
-        for p in lines
-            .iter()
-            .flat_map(|l| Midpoint::<f32, i64>::new(l.0, l.1))
-        {
-            // Handle when OOB is negative
-            let x = max(p.0, 0) as usize;
-            let y = max(p.1, 0) as usize;
-
-            // Register ends
-            if let Some(Some(reg)) = ends.get_mut(x).as_mut() {
-                if reg.start == y {
-                    continue;
-                }
-
-                // If point is left-more than start, it is the starting point
-                if y < reg.start {
-                    // Move old start to end if there is none (if some, then end will already be bigger)
-                    if reg.end.is_none() {
-                        reg.end = Some(reg.start)
-                    }
-                    reg.start = y
-                }
-                // If there was no end, this point must be the biggest. If there is, then replace if new point is bigger
-                else if reg.end.is_none() || reg.end.unwrap() < y {
-                    reg.end = Some(y)
-                }
-            } else if x < N {
-                ends[x] = Option::from(RowReg {
-                    start: y,
-                    end: None,
-                })
-            }
-
-            // Bounds check, then check for collision on the line
-            if !(p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64)
-                && self.data[x][y] == Cell::Occupied
-            {
-                return true;
-            }
-        }
-
-        // Now check the inside of the polygon, bounded by the ends
-        for (x, reg) in ends.iter().enumerate() {
-            if let Some(reg) = reg {
-                // Ignore rows with only one cell filled
-                if let Some(end) = reg.end {
-                    for y in reg.start..end {
-                        // Bounds check, then check for collision
-                        if !(x >= N || y >= N) && self.data[x][y] == Cell::Occupied {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        false
     }
 }
 
