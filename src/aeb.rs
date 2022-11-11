@@ -257,5 +257,22 @@ mod test {
     #[test]
     fn full_aeb_works() {
         //TODO also using the real data, after the above two
+
+        let mut aeb = Aeb::<51>::new(
+            3.0,
+            0.0,
+            1.08,
+            ((-0.675, 1.43), (0.675, -0.59)),
+            KartPoint(1.43, 0.0),
+            10.0,
+        );
+
+        let points = [KartPoint(1.0, 0.0); 12];
+        aeb.add_points(&points);
+        std::println!("{}", aeb.grid);
+
+        let (collides, time) = aeb.collision_check(None);
+
+        assert!(collides)
     }
 }

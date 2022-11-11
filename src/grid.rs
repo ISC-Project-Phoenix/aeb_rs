@@ -74,7 +74,7 @@ impl<const N: usize> Grid<N> {
     /// - Be aware that this function will use usize*N stack space.
     pub fn polygon_collide(&mut self, lines: &[Line]) -> bool {
         let mut collided = false;
-        self.walk_polygon(lines, |cell, _, _| collided = *cell == Cell::Occupied);
+        self.walk_polygon(lines, |cell, _, _| collided |= *cell == Cell::Occupied);
         collided
     }
 
@@ -127,7 +127,7 @@ impl<const N: usize> Grid<N> {
             // Mark line square, if in bounds. Do this here as we still want to fill in the area via ends
             // even if this point is OOB
             if !(p.0 < 0 || p.0 >= N as i64 || p.1 < 0 || p.1 >= N as i64) {
-                visitor(self.data[x].get_mut(y).unwrap(), x, y);
+                visitor(&mut self.data[x][y], x, y);
             }
         }
 
@@ -139,7 +139,7 @@ impl<const N: usize> Grid<N> {
                     for y in reg.start..end {
                         // Bounds check
                         if !(x >= N || y >= N) {
-                            visitor(self.data[x].get_mut(y).unwrap(), x, y);
+                            visitor(&mut self.data[x][y], x, y);
                         }
                     }
                 }
