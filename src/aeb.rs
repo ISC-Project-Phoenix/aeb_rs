@@ -1,4 +1,5 @@
 use crate::grid::{Grid, KartPoint};
+use core::fmt::{Debug, Display, Formatter};
 use micromath::F32;
 
 /// The entrypoint to the automatic emergency braking algorithm.
@@ -215,6 +216,17 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
 
             self.grid.mark_occupied(p);
         }
+    }
+}
+
+impl<const N: usize> Display for Aeb<N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(
+            f,
+            "steering: {:.2} vel: {:.2}",
+            self.steering_angle, self.velocity
+        )?;
+        writeln!(f, "{}", self.grid)
     }
 }
 

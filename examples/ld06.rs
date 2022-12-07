@@ -52,7 +52,7 @@ fn main() {
                 {
                     for (i, p) in scan.data.into_iter().enumerate() {
                         // Filter out close or unlikely points
-                        if p.dist < 150 || p.confidence < 50 {
+                        if p.dist < 150 || p.confidence < 150 {
                             continue;
                         }
 

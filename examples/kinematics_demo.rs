@@ -10,7 +10,7 @@ fn main() {
     //Axel to Lidar = 143cm baby lidar
 
     // Please don't actually use AEB like this lol
-    let mut aeb = Aeb::<31>::new(
+    let mut aeb = Aeb::<51>::new(
         3.0,
         0.0,
         1.08,
@@ -18,10 +18,10 @@ fn main() {
         KartPoint(1.43, 0.0),
         3.0,
     );
-    let mut grid = Grid::<31>::new();
+    let mut grid = Grid::<51>::new();
 
     // Look over some steering angles
-    for theta in 0..40 {
+    for theta in 0..29 {
         aeb.update_steering(theta as f32);
 
         // Simulate 2 seconds into the future
