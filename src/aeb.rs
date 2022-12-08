@@ -200,6 +200,21 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
         self.min_ttc = min_ttc
     }
 
+    /// Gets the currently configured steering angle.
+    pub fn get_steering(&self) -> f32 {
+        self.steering_angle
+    }
+
+    /// Gets the currently configured velocity.
+    pub fn get_velocity(&self) -> f32 {
+        self.velocity
+    }
+
+    /// Gets the currently configured time to collision.
+    pub fn get_ttc(&self) -> f32 {
+        self.min_ttc
+    }
+
     /// Adds points to the grid to be used during the next collision check.
     ///
     /// Points that are < 15cm from the data source will be filtered out.
