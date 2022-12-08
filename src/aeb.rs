@@ -1,5 +1,5 @@
 use crate::grid::{Grid, KartPoint};
-use core::fmt::{Debug, Display, Formatter};
+use core::fmt::{Display, Formatter};
 use micromath::F32;
 
 /// The entrypoint to the automatic emergency braking algorithm.
@@ -65,7 +65,7 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
             self.add_points(p)
         }
 
-        const STEP_MS: usize = 10;
+        const STEP_MS: usize = 500;
         // Convert ttc to millis
         let ttc = (self.min_ttc * 1000.0) as usize;
 
@@ -283,9 +283,7 @@ mod test {
 
     #[test]
     fn full_aeb_works() {
-        //TODO also using the real data, after the above two
-
-        let mut aeb = Aeb::<51>::new(
+        let mut aeb = Aeb::<411>::new(
             3.0,
             0.0,
             1.08,
@@ -293,13 +291,39 @@ mod test {
             KartPoint(1.43, 0.0),
             10.0,
         );
+        std::println!("size: {} bytes", core::mem::size_of::<Aeb::<411>>());
 
-        let points = [KartPoint(1.0, 0.0); 12];
-        aeb.add_points(&points);
-        std::println!("{}", aeb.grid);
+        // Single point in front of kart
+        {
+            let points = [KartPoint(1.0, 0.0); 12];
+            aeb.add_points(&points);
+            //std::println!("{}", aeb.grid);
 
-        let (collides, time) = aeb.collision_check(None);
+            let (collides, _) = aeb.collision_check(None);
 
-        assert!(collides)
+            assert!(collides)
+        }
+
+        // Points at edges of karts
+        {
+            let points = [KartPoint(7.0, 0.675), KartPoint(7.0, -0.675)];
+            aeb.add_points(&points);
+            //std::println!("{}", aeb.grid);
+
+            let (collides, _) = aeb.collision_check(None);
+
+            assert!(collides)
+        }
+
+        // Points off edges dont collide
+        {
+            let points = [KartPoint(7.0, 0.716), KartPoint(7.0, -0.716)];
+            aeb.add_points(&points);
+            //std::println!("{}", aeb.grid);
+
+            let (collides, _) = aeb.collision_check(None);
+
+            assert!(!collides)
+        }
     }
 }
