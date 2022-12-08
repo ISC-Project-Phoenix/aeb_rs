@@ -19,6 +19,8 @@ pub struct Aeb<const GRID_N: usize> {
     axel_to_range: KartPoint,
     /// The minimum allowed time to collision.
     min_ttc: f32,
+    /// ms timestep used in the AEB loop. Greatly increases complexity of the algorithm if set to a small value.
+    timestep: usize,
 }
 
 impl<const GRID_N: usize> Aeb<GRID_N> {
@@ -51,6 +53,7 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
             collision_box,
             min_ttc,
             axel_to_range: axel_to_sensor,
+            timestep: 500,
         }
     }
 
@@ -65,12 +68,11 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
             self.add_points(p)
         }
 
-        const STEP_MS: usize = 500;
         // Convert ttc to millis
         let ttc = (self.min_ttc * 1000.0) as usize;
 
         // Collision check by integrating over our model
-        for timestep in (0..ttc).step_by(STEP_MS) {
+        for timestep in (0..ttc).step_by(self.timestep) {
             // Predict position at time with definite integral of forward kinematics
             let (pos, heading) = self.predict_pos(timestep);
 
@@ -198,6 +200,20 @@ impl<const GRID_N: usize> Aeb<GRID_N> {
     /// the minimum tolerated collision time.
     pub fn update_ttc(&mut self, min_ttc: f32) {
         self.min_ttc = min_ttc
+    }
+
+    /// Updates the timestep (in milliseconds) taken in the AEB loop. The accuracy of collision times is equal to this value,
+    /// but collision detection itself will remain accurate. Setting the timestep to a small value
+    /// will significantly increase the complexity of collision checking, so change with care.
+    ///
+    /// Values of 100-500 are reasonable, defaults to 500.
+    pub fn update_timestep(&mut self, ts_ms: usize) {
+        self.timestep = ts_ms
+    }
+
+    /// Gets the currently configured timestep.
+    pub fn get_timestep(&self) -> usize {
+        self.timestep
     }
 
     /// Gets the currently configured steering angle.
