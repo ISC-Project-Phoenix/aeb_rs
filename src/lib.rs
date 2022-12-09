@@ -25,6 +25,7 @@
 //! aeb.update_velocity(5.0);
 //! aeb.update_steering(0.0);
 //! aeb.update_ttc(2.0);
+//! aeb.update_timestep(20);
 //!
 //! // Add some (very fake) obstacle readings
 //! let points = [KartPoint(1.0, 0.0); 12];
@@ -36,7 +37,7 @@
 //!
 //! println!("Collides at: {}", collides_at);
 //! assert!(should_stop);
-//! assert_eq!(collides_at, 210);
+//! assert_eq!(collides_at, 220);
 //! ```
 
 #![no_std]
