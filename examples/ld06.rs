@@ -25,14 +25,14 @@ fn main() {
     let mut ld06 = LD06::new(serial);
 
     // Create grid
-    let mut grid = Grid::<31>::new();
+    let mut grid = Grid::<71>::new();
     let size = grid.get_size();
 
     loop {
         match ld06.read_next_byte() {
             Err(err) => match err {
                 Error::Other(parse_err) => match parse_err {
-                    ParseError::SerialErr => {
+                    ParseError::SerialErr(_) => {
                         println!("Serial issue")
                     }
                     ParseError::CrcFail => {

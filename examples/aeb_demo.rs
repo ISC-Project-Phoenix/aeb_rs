@@ -43,7 +43,7 @@ fn main() {
         match ld06.read_next_byte() {
             Err(err) => match err {
                 Error::Other(parse_err) => match parse_err {
-                    ParseError::SerialErr => {
+                    ParseError::SerialErr(_) => {
                         println!("Serial issue")
                     }
                     ParseError::CrcFail => {
