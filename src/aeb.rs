@@ -281,7 +281,7 @@ mod test {
 
         // Straight line, with translation to be about sensor
         let pred = sys.predict_pos(1000);
-        assert_eq!(pred.0 .0, 5.0 - 3.1);
+        assert_eq!(pred.0.0, 5.0 - 3.1);
         assert_eq!(pred.1, 0.0);
 
         sys.update_steering(-5.0);

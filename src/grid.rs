@@ -350,6 +350,10 @@ mod test {
         //Test OOB
         let k = KartPoint(10.1, 0.0);
         assert!(k.transform_to_grid(GridSize(5)).is_err());
+
+        //Test min
+        let k = KartPoint(0.0, 0.0);
+        assert!(k.transform_to_grid(GridSize(5)).is_err());
     }
 
     #[test]
