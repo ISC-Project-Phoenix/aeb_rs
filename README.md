@@ -5,7 +5,7 @@ This crate is an implementation of the automatic emergency braking algorithm for
 
 This crate is no_std, and designed to be run on embedded devices.
 
-For algorithm and system integration details, please see the [AEB design document](https://github.com/ISC-Project-Phoenix/design/blob/main/software/AEB.md).
+For algorithm and system integration details, please see the [AEB design document](https://github.com/ISC-Project-Phoenix/design/blob/main/software/embed/AEB.md).
 
 # Example
 
